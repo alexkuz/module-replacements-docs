@@ -1,61 +1,73 @@
 ---
+import { type ModuleReplacement } from 'module-replacements';
 interface Props {
-	title: string;
-	body: string;
-	href: string;
+	replacement: ModuleReplacement;
 }
 
-const { href, title, body } = Astro.props;
+const { replacement } = Astro.props;
+
+let title = replacement.moduleName;
+let npmUrl = 'https://www.npmjs.com/package/' + replacement.moduleName;
+let description = '';
+let mdnUrl = '';
+let docPath = '';
+
+switch (replacement.type) {
+case 'native':
+	description = replacement.replacement;
+	mdnUrl = 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/' + replacement.mdnPath;
+	break;
+case 'simple':
+	description = replacement.replacement;
+	break;
+case 'documented':
+	docPath = replacement.docPath;
+}
 ---
 
-<li class="link-card">
-	<a href={href}>
-		<h2>
-			{title}
-			<span>&rarr;</span>
-		</h2>
-		<p>
-			{body}
-		</p>
-	</a>
+<li class="replacement-card">
+	<h3><a href={npmUrl}>{title}</a></h3>
+	{description ? <p>{description}</p> : null}
+	{mdnUrl ? <small>(<a href={mdnUrl}>MDN</a>)</small> : null}
+	{docPath ? <button class="show-btn" data-docpath={docPath} type="button">Show</button> : null}
 </li>
+
 <style>
-	.link-card {
-		list-style: none;
-		display: flex;
-		padding: 1px;
-		background-color: #23262d;
-		background-image: none;
-		background-size: 400%;
-		border-radius: 7px;
-		background-position: 100%;
-		transition: background-position 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-		box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-	}
-	.link-card > a {
-		width: 100%;
-		text-decoration: none;
-		line-height: 1.4;
-		padding: calc(1.5rem - 1px);
-		border-radius: 8px;
-		color: white;
-		background-color: #23262d;
-		opacity: 0.8;
-	}
-	h2 {
-		margin: 0;
-		font-size: 1.25rem;
-		transition: color 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-	}
-	p {
-		margin-top: 0.5rem;
-		margin-bottom: 0;
-	}
-	.link-card:is(:hover, :focus-within) {
-		background-position: 0;
-		background-image: var(--accent-gradient);
-	}
-	.link-card:is(:hover, :focus-within) h2 {
-		color: rgb(var(--accent-light));
-	}
+.replacement-card {
+	list-style-type: none;
+	border: 1px solid var(--text-muted);
+	border-radius: 10px;
+	padding: 10px;
+	background: rgba(0 0 0 / 10%);
+}
+
+.replacement-card h3 {
+	margin: 0;
+}
+
+.replacement-card h3 a {
+	color: inherit;
+}
+
+.replacement-card h3 a:hover {
+	text-decoration: underline;
+}
+
 </style>
+
+<script>
+	document.querySelectorAll('.show-btn').forEach(btn => {
+		btn.addEventListener('click', () => {
+			let docPath = btn.getAttribute('data-docpath');
+			let docUrl = `https://raw.githubusercontent.com/es-tooling/module-replacements/main/docs/modules/${docPath}.md`;
+
+			fetch(docUrl)
+				.then(response => response.text())
+				.then(text => {
+					let textEl = document.createElement('div');
+					textEl.innerHTML = text;
+					btn.parentNode.replaceChild(textEl, btn);
+				});
+		});
+	});
+</script>
