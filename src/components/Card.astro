@@ -34,8 +34,8 @@ case 'documented':
 	</li>
 	: <li class="replacement-card"}>
 		<h3><a href={npmUrl}>{title}</a></h3>
-		{description ? <p>{description}</p> : null}
-		{mdnUrl ? <small>(<a href={mdnUrl}>MDN</a>)</small> : null}
+		{description ? <p><b class="muted">&rarr; </b> <span>{description}</span></p> : null}
+		{mdnUrl ? <small><a href={mdnUrl}>MDN</a></small> : null}
 	</li>
 }
 
@@ -45,11 +45,15 @@ case 'documented':
 	border: 1px solid color-mix(in srgb, var(--text-main) 15%, transparent);
 	border-radius: 10px;
 	padding: 10px;
-	background: rgba(0 0 0 / 10%);
+	background: rgba(0 0 0 / 5%);
+}
+
+.muted {
+	color: color-mix(in srgb, var(--text-main) 40%, transparent);
 }
 
 .replacement-card h3 {
-	margin: 0;
+	margin-block: 0;
 }
 
 .replacement-card h3 a {
