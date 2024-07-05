@@ -25,17 +25,24 @@ case 'documented':
 }
 ---
 
-<li class="replacement-card">
-	<h3><a href={npmUrl}>{title}</a></h3>
-	{description ? <p>{description}</p> : null}
-	{mdnUrl ? <small>(<a href={mdnUrl}>MDN</a>)</small> : null}
-	{docPath ? <button class="show-btn" data-docpath={docPath} type="button">Show</button> : null}
-</li>
+{docPath
+	? <li class="replacement-card"}>
+		<div class="preview">
+			<h3><a href={npmUrl}>{title}</a></h3>
+			<button class="show-btn" data-docpath={docPath} type="button">Show</button>
+		</div>
+	</li>
+	: <li class="replacement-card"}>
+		<h3><a href={npmUrl}>{title}</a></h3>
+		{description ? <p>{description}</p> : null}
+		{mdnUrl ? <small>(<a href={mdnUrl}>MDN</a>)</small> : null}
+	</li>
+}
 
 <style>
 .replacement-card {
 	list-style-type: none;
-	border: 1px solid var(--text-muted);
+	border: 1px solid color-mix(in srgb, var(--text-main) 15%, transparent);
 	border-radius: 10px;
 	padding: 10px;
 	background: rgba(0 0 0 / 10%);
@@ -53,9 +60,28 @@ case 'documented':
 	text-decoration: underline;
 }
 
+.preview {
+	display: flex;
+	gap: 20px;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.show-btn {
+	margin: 0;
+}
+
+</style>
+
+<style is:global>
+.md h3:first-of-type {
+	margin-top: 8px;
+}
 </style>
 
 <script>
+	import snarkdown from 'snarkdown';
+
 	document.querySelectorAll('.show-btn').forEach(btn => {
 		btn.addEventListener('click', () => {
 			let docPath = btn.getAttribute('data-docpath');
@@ -64,9 +90,13 @@ case 'documented':
 			fetch(docUrl)
 				.then(response => response.text())
 				.then(text => {
-					let textEl = document.createElement('div');
-					textEl.innerHTML = text;
-					btn.parentNode.replaceChild(textEl, btn);
+					let html = snarkdown(text)
+						.replace(/<h1/g, '<h3')
+						.replace(/<\/h1>/g, '</h3>')
+						.replace(/<h2/g, '<h4')
+						.replace(/<\/h2>/g, '</h4>');
+
+					if (btn.parentNode instanceof HTMLElement) btn.parentNode.innerHTML = '<div class="md">' + html + '</div>';
 				});
 		});
 	});
