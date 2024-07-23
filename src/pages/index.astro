@@ -13,23 +13,28 @@ let preferred = preferredReplacements.moduleReplacements.toSorted(nameSorter);
 
 <Layout title="Module Replacements">
 	<main>
-		<h1><a href="https://github.com/es-tooling/module-replacements">Module Replacements</a></h1>
-		<h2>Native replacements</h2>
-		<ul role="list" class="replacement-card-grid">
+		<div class="header">
+			<h1>
+				<a href="https://github.com/es-tooling/module-replacements">Module Replacements</a>
+			</h1>
+			<input id="filter" class="filter" type="search" placeholder="Filter modules" />
+		</div>
+		<h2 id="native-list-title">Native replacements</h2>
+		<ul id="native-list" class="replacement-card-grid">
 		{native.map((rep) => (
 			<Card replacement={rep} />
 		))}
 		</ul>
 		<hr />
-		<h2>Micro utilities</h2>
-		<ul role="list" class="replacement-card-grid">
+		<h2 id="utils-list-title">Micro utilities</h2>
+		<ul id="utils-list" class="replacement-card-grid">
 		{microUtils.map((rep) => (
 			<Card replacement={rep} />
 		))}
 		</ul>
 		<hr />
-		<h2>Preferred replacements</h2>
-		<ul role="list" class="replacement-card-list">
+		<h2 id="preferred-list-title">Preferred replacements</h2>
+		<ul id="preferred-list" class="replacement-card-list">
 		{preferred.map((rep) => (
 			<Card replacement={rep} />
 		))}
@@ -38,6 +43,16 @@ let preferred = preferredReplacements.moduleReplacements.toSorted(nameSorter);
 </Layout>
 
 <style>
+.header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.filter {
+	margin-block: 20px 0;
+}
+
 .replacement-card-grid {
 	display: grid;
 	padding: 0;
@@ -57,3 +72,39 @@ hr {
 	margin-block: 40px;
 }
 </style>
+
+<script>
+function applyFilter(filter: string) {
+	return (acc: boolean, li: HTMLLIElement) => {
+		const title = li.querySelector('h3')?.textContent || '';
+		const show = !filter || title.toLowerCase().includes(filter);
+		li.style.display = show ? 'block' : 'none';
+
+		return acc || show;
+	};
+}
+
+function filterList(filter: string, listId: string) {
+	const reducer = applyFilter(filter);
+	const hasItems = Array.from(document.querySelectorAll(listId + ' > li')).reduce(reducer, false);
+
+	const listEl = document.querySelector(listId);
+	if (listEl instanceof HTMLElement) {
+		listEl.style.display = hasItems ? 'grid' : 'none';
+	}
+
+	const titleEl = document.querySelector(listId + '-title');
+	if (titleEl instanceof HTMLElement) {
+		titleEl.style.display = hasItems ? 'block' : 'none';
+	}
+}
+
+document.querySelector('#filter').addEventListener('input', (e) => {
+	if (!(e.target instanceof HTMLInputElement)) return;
+	const filter = e.target.value.toLowerCase();
+
+	filterList(filter, '#native-list');
+	filterList(filter, '#utils-list');
+	filterList(filter, '#preferred-list');
+});
+</script>

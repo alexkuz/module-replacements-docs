@@ -26,13 +26,13 @@ case 'documented':
 ---
 
 {docPath
-	? <li class="replacement-card"}>
+	? <li class="replacement-card">
 		<div class="preview">
 			<h3><a href={npmUrl}>{title}</a></h3>
 			<button class="show-btn" data-docpath={docPath} type="button">Show</button>
 		</div>
 	</li>
-	: <li class="replacement-card"}>
+	: <li class="replacement-card">
 		<h3><a href={npmUrl}>{title}</a></h3>
 		{description ? <p><b class="muted">&rarr; </b> <span>{description}</span></p> : null}
 		{mdnUrl ? <small><a href={mdnUrl}>MDN</a></small> : null}
