@@ -1,110 +1,153 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Card from '../components/Card.astro';
-import { nativeReplacements, microUtilsReplacements, preferredReplacements, type ModuleReplacement } from 'module-replacements';
+import Layout from "../layouts/Layout.astro";
+import Card, { type ModuleReplacementOrGroup } from "../components/Card.astro";
+import {
+    nativeReplacements,
+    microUtilsReplacements,
+    preferredReplacements,
+    type ModuleReplacement,
+} from "module-replacements";
 
-const nameSorter = (a: ModuleReplacement, b: ModuleReplacement) => a.moduleName > b.moduleName ? 1 : -1;
+function nameSorter(a: ModuleReplacementOrGroup, b: ModuleReplacementOrGroup) {
+    const aName = "moduleName" in a ? a.moduleName : a.groupName;
+    const bName = "moduleName" in b ? b.moduleName : b.groupName;
+    return aName > bName ? 1 : -1;
+}
 
 let native = nativeReplacements.moduleReplacements.toSorted(nameSorter);
 let microUtils = microUtilsReplacements.moduleReplacements.toSorted(nameSorter);
-let preferred = preferredReplacements.moduleReplacements.toSorted(nameSorter);
 
+let groupedPreffered = preferredReplacements.moduleReplacements.reduce(
+    (acc, rep) => {
+        const group = rep.type === "documented" ? rep.docPath : "default";
+        acc[group] = [...(acc[group] ?? []), rep];
+        return acc;
+    },
+    {} as Record<string, ModuleReplacement[]>,
+);
+
+let preferred = Object.entries(groupedPreffered).reduce(
+    (acc, [group, reps]) => {
+        if (group === "default") {
+            acc.concat(reps);
+            return acc;
+        }
+
+        if (reps.length === 1) {
+            acc.push(reps[0]);
+            return acc;
+        }
+
+        acc.push({
+            type: "group",
+            groupName: group,
+            replacements: reps,
+        });
+        return acc;
+    },
+    [] as ModuleReplacementOrGroup[],
+);
+
+preferred = preferred.sort(nameSorter);
 ---
 
 <Layout title="Module Replacements">
-	<main>
-		<div class="header">
-			<h1>
-				<a href="https://github.com/es-tooling/module-replacements">Module Replacements</a>
-			</h1>
-			<input id="filter" class="filter" type="search" placeholder="Filter modules" />
-		</div>
-		<h2 id="native-list-title">Native replacements</h2>
-		<ul id="native-list" class="replacement-card-grid">
-		{native.map((rep) => (
-			<Card replacement={rep} />
-		))}
-		</ul>
-		<hr />
-		<h2 id="utils-list-title">Micro utilities</h2>
-		<ul id="utils-list" class="replacement-card-grid">
-		{microUtils.map((rep) => (
-			<Card replacement={rep} />
-		))}
-		</ul>
-		<hr />
-		<h2 id="preferred-list-title">Preferred replacements</h2>
-		<ul id="preferred-list" class="replacement-card-list">
-		{preferred.map((rep) => (
-			<Card replacement={rep} />
-		))}
-		</ul>
-	</main>
+    <main>
+        <div class="header">
+            <h1>
+                <a href="https://github.com/es-tooling/module-replacements"
+                    >Module Replacements</a
+                >
+            </h1>
+            <input
+                id="filter"
+                class="filter"
+                type="search"
+                placeholder="Filter modules"
+            />
+        </div>
+        <h2 id="native-list-title">Native replacements</h2>
+        <ul id="native-list" class="replacement-card-grid">
+            {native.map((rep) => <Card replacement={rep} />)}
+        </ul>
+        <hr />
+        <h2 id="utils-list-title">Micro utilities</h2>
+        <ul id="utils-list" class="replacement-card-grid">
+            {microUtils.map((rep) => <Card replacement={rep} />)}
+        </ul>
+        <hr />
+        <h2 id="preferred-list-title">Preferred replacements</h2>
+        <ul id="preferred-list" class="replacement-card-list">
+            {preferred.map((rep) => <Card replacement={rep} />)}
+        </ul>
+    </main>
 </Layout>
 
 <style>
-.header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-.filter {
-	margin-block: 20px 0;
-}
+    .filter {
+        margin-block: 20px 0;
+    }
 
-.replacement-card-grid {
-	display: grid;
-	padding: 0;
-	gap: 20px;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	align-items: start;
-}
+    .replacement-card-grid {
+        display: grid;
+        padding: 0;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        align-items: start;
+    }
 
-.replacement-card-list {
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-	gap: 20px;
-}
+    .replacement-card-list {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
 
-hr {
-	margin-block: 40px;
-}
+    hr {
+        margin-block: 40px;
+    }
 </style>
 
 <script>
-function applyFilter(filter: string) {
-	return (acc: boolean, li: HTMLLIElement) => {
-		const title = li.querySelector('h3')?.textContent || '';
-		const show = !filter || title.toLowerCase().includes(filter);
-		li.style.display = show ? 'block' : 'none';
+    function applyFilter(filter: string) {
+        return (acc: boolean, li: HTMLLIElement) => {
+            const search = li.getAttribute('data-search');
+            const show = !filter || search.includes(filter);
+            li.style.display = show ? "block" : "none";
 
-		return acc || show;
-	};
-}
+            return acc || show;
+        };
+    }
 
-function filterList(filter: string, listId: string) {
-	const reducer = applyFilter(filter);
-	const hasItems = Array.from(document.querySelectorAll(listId + ' > li')).reduce(reducer, false);
+    function filterList(filter: string, listId: string) {
+        const reducer = applyFilter(filter);
+        const hasItems = Array.from(
+            document.querySelectorAll(listId + " > li"),
+        ).reduce(reducer, false);
 
-	const listEl = document.querySelector(listId);
-	if (listEl instanceof HTMLElement) {
-		listEl.style.display = hasItems ? 'grid' : 'none';
-	}
+        const listEl = document.querySelector(listId);
+        if (listEl instanceof HTMLElement) {
+            listEl.style.display = hasItems ? "grid" : "none";
+        }
 
-	const titleEl = document.querySelector(listId + '-title');
-	if (titleEl instanceof HTMLElement) {
-		titleEl.style.display = hasItems ? 'block' : 'none';
-	}
-}
+        const titleEl = document.querySelector(listId + "-title");
+        if (titleEl instanceof HTMLElement) {
+            titleEl.style.display = hasItems ? "block" : "none";
+        }
+    }
 
-document.querySelector('#filter').addEventListener('input', (e) => {
-	if (!(e.target instanceof HTMLInputElement)) return;
-	const filter = e.target.value.toLowerCase();
+    document.querySelector("#filter").addEventListener("input", (e) => {
+        if (!(e.target instanceof HTMLInputElement)) return;
+        const filter = e.target.value.toLowerCase();
 
-	filterList(filter, '#native-list');
-	filterList(filter, '#utils-list');
-	filterList(filter, '#preferred-list');
-});
+        filterList(filter, "#native-list");
+        filterList(filter, "#utils-list");
+        filterList(filter, "#preferred-list");
+    });
 </script>

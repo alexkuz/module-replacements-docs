@@ -1,107 +1,181 @@
 ---
-import { type ModuleReplacement } from 'module-replacements';
+import { type ModuleReplacement } from "module-replacements";
+export type ModuleReplacementGroup = {
+    type: "group";
+    groupName: string;
+    replacements: ModuleReplacement[];
+};
+
+export type ModuleReplacementOrGroup = ModuleReplacement | ModuleReplacementGroup;
+
 interface Props {
-	replacement: ModuleReplacement;
+    replacement: ModuleReplacementOrGroup;
 }
 
 const { replacement } = Astro.props;
 
-let title = replacement.moduleName;
-let npmUrl = 'https://www.npmjs.com/package/' + replacement.moduleName;
-let description = '';
-let mdnUrl = '';
-let docPath = '';
+let title: string, search: string, npmUrl: string, description: string, mdnUrl: string, docPath: string, group: string[] = [];
 
-switch (replacement.type) {
-case 'native':
-	description = replacement.replacement;
-	mdnUrl = 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/' + replacement.mdnPath;
-	break;
-case 'simple':
-	description = replacement.replacement;
-	break;
-case 'documented':
-	docPath = replacement.docPath;
+if (replacement.type === "group") {
+    if (replacement.replacements[0].type === "documented") {
+        title = replacement.groupName;
+
+        if (!title.startsWith('is')) {
+            title = title.replace(/-/g, " / ");
+        }
+
+        group = replacement.replacements.map(r => r.moduleName);
+        search = (title + ' ' + group.join(" ")).toLowerCase();
+        docPath = replacement.replacements[0].docPath;
+    }
+} else {
+
+    title = replacement.moduleName;
+    search = title.toLowerCase();
+    npmUrl = "https://www.npmjs.com/package/" + replacement.moduleName;
+    description = "";
+    mdnUrl = "";
+    docPath = "";
+
+    switch (replacement.type) {
+        case "native":
+            description = replacement.replacement;
+            mdnUrl =
+                "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/" +
+                replacement.mdnPath;
+            break;
+        case "simple":
+            description = replacement.replacement;
+            break;
+        case "documented":
+            docPath = replacement.docPath;
+    }
 }
 ---
 
-{docPath
-	? <li class="replacement-card">
-		<div class="preview">
-			<h3><a href={npmUrl}>{title}</a></h3>
-			<button class="show-btn" data-docpath={docPath} type="button">Show</button>
-		</div>
-	</li>
-	: <li class="replacement-card">
-		<h3><a href={npmUrl}>{title}</a></h3>
-		{description ? <p><b class="muted">&rarr; </b> <span>{description}</span></p> : null}
-		{mdnUrl ? <small><a href={mdnUrl}>MDN</a></small> : null}
-	</li>
+{
+    docPath ? (
+        <li class="replacement-card" data-search={search}>
+            <div class="preview">
+                <h3>
+                    <a href={npmUrl}>{title}</a>
+                </h3>
+                <button class="show-btn" data-docpath={docPath} type="button">
+                    Show
+                </button>
+            </div>
+            {group.length > 0
+            ? <details>
+                <summary>Modules</summary>
+                <ul class="replacement-group">{group.map(name => <li>{name}</li>)}</ul>
+            </details>
+            : null
+            }
+        </li>
+    ) : (
+        <li class="replacement-card" data-search={search}>
+            <h3>
+                <a href={npmUrl}>{title}</a>
+            </h3>
+            {description ? (
+                <p>
+                    <b class="muted">&rarr; </b> <span>{description}</span>
+                </p>
+            ) : null}
+            {mdnUrl ? (
+                <small>
+                    <a href={mdnUrl}>MDN</a>
+                </small>
+            ) : null}
+        </li>
+    )
 }
 
 <style>
-.replacement-card {
-	list-style-type: none;
-	border: 1px solid color-mix(in srgb, var(--text-main) 15%, transparent);
-	border-radius: 10px;
-	padding: 10px;
-	background: rgba(0 0 0 / 5%);
-}
+    .replacement-card {
+        list-style-type: none;
+        border: 1px solid color-mix(in srgb, var(--text-main) 15%, transparent);
+        border-radius: 10px;
+        padding: 10px;
+        background: rgba(0 0 0 / 5%);
+    }
 
-.muted {
-	color: color-mix(in srgb, var(--text-main) 40%, transparent);
-}
+    .muted {
+        color: color-mix(in srgb, var(--text-main) 40%, transparent);
+    }
 
-.replacement-card h3 {
-	margin-block: 0;
-}
+    .replacement-card h3 {
+        margin-block: 0;
+    }
 
-.replacement-card h3 a {
-	color: inherit;
-}
+    .replacement-card h3 a {
+        color: inherit;
+    }
 
-.replacement-card h3 a:hover {
-	text-decoration: underline;
-}
+    .replacement-card h3 a:hover {
+        text-decoration: underline;
+    }
 
-.preview {
-	display: flex;
-	gap: 20px;
-	align-items: center;
-	justify-content: space-between;
-}
+    .preview {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-.show-btn {
-	margin: 0;
-}
+    details {
+        margin-block: 10px 0;
+    }
 
+    .replacement-group {
+        list-style-type: none;
+        padding-inline-start: 0;
+        width: 100%;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        overflow: hidden;
+    }
+
+    .replacement-group > li {
+        border: 1px solid color-mix(in srgb, var(--text-main) 15%, transparent);
+        border-radius: 5px;
+        padding: 2px 5px;
+        font-size: 12px;
+    }
+
+    .show-btn {
+        margin: 0;
+    }
 </style>
 
 <style is:global>
-.md h3:first-of-type {
-	margin-top: 8px;
-}
+    .md h3:first-of-type {
+        margin-top: 8px;
+    }
 </style>
 
 <script>
-	import snarkdown from 'snarkdown';
+    import snarkdown from "snarkdown";
 
-	document.querySelectorAll('.show-btn').forEach(btn => {
-		btn.addEventListener('click', () => {
-			let docPath = btn.getAttribute('data-docpath');
-			let docUrl = `https://raw.githubusercontent.com/es-tooling/module-replacements/main/docs/modules/${docPath}.md`;
+    document.querySelectorAll(".show-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            let docPath = btn.getAttribute("data-docpath");
+            let docUrl = `https://raw.githubusercontent.com/es-tooling/module-replacements/main/docs/modules/${docPath}.md`;
 
-			fetch(docUrl)
-				.then(response => response.text())
-				.then(text => {
-					let html = snarkdown(text)
-						.replace(/<h1/g, '<h3')
-						.replace(/<\/h1>/g, '</h3>')
-						.replace(/<h2/g, '<h4')
-						.replace(/<\/h2>/g, '</h4>');
+            fetch(docUrl)
+                .then((response) => response.text())
+                .then((text) => {
+                    let html = snarkdown(text)
+                        .replace(/<h1/g, "<h3")
+                        .replace(/<\/h1>/g, "</h3>")
+                        .replace(/<h2/g, "<h4")
+                        .replace(/<\/h2>/g, "</h4>");
 
-					if (btn.parentNode instanceof HTMLElement) btn.parentNode.innerHTML = '<div class="md">' + html + '</div>';
-				});
-		});
-	});
+                    if (btn.parentNode instanceof HTMLElement)
+                        btn.parentNode.innerHTML =
+                            '<div class="md">' + html + "</div>";
+                });
+        });
+    });
 </script>
