@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "astro": "^4.11.5",
-    "module-replacements": "2.5.0",
+    "module-replacements": "2.6.0",
     "snarkdown": "2.0.0"
   }
 }
